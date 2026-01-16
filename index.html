@@ -430,9 +430,17 @@
     }
 
     async function postToScript(payload) {
-      if (!SCRIPT_URL || SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbw4EiRe0-J31SuZUb8dYqfQx1QRA7SqhbPk6HbjmpNTWdHq-jxdkgRkPOnvAvxWEkzc/exec')) {
-        throw new Error('SCRIPT_URL nije postavljen.');
-      }
+      const body = new URLSearchParams();
+      Object.keys(payload).forEach(k => body.append(k, payload[k]));
+
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: body
+      });
+
+      return true;
+    }
       // Form-encoded radi pouzdano u Apps Scriptu
       const body = new URLSearchParams();
       Object.keys(payload).forEach(k => body.append(k, payload[k]));
