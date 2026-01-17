@@ -155,6 +155,18 @@ let data=[];
 let editMode=false;
 let editingRowId=null;
 
+// ✅ Stabilno u svim browserima (ne oslanjamo se na automatske globalne varijable iz HTML id-a)
+const supplierSelectEl = document.getElementById('supplierSelect');
+const tableEl = document.getElementById('table');
+const tbodyEl = document.getElementById('tbody');
+const editBtnEl = document.getElementById('editBtn');
+const editFormEl = document.getElementById('editForm');
+const productInputEl = document.getElementById('productInput');
+const codeInputEl = document.getElementById('codeInput');
+const saveBtnEl = document.getElementById('saveBtn');
+const qrModalEl = document.getElementById('qrModal');
+const printContentEl = document.getElementById('printContent');
+
 /* LOAD */
 async function loadData(){
   const r=await fetch(SCRIPT_URL);
@@ -164,33 +176,39 @@ async function loadData(){
 }
 
 function fillSuppliers(){
-  supplierSelect.innerHTML='<option value="">-- Odaberite --</option>';
+  supplierSelectEl.innerHTML='<option value="">-- Odaberite --</option>';
   [...new Set(data.map(x=>x.dobavljac))].forEach(d=>{
     const o=document.createElement("option");
     o.value=o.textContent=d;
-    supplierSelect.appendChild(o);
+    supplierSelectEl.appendChild(o);
   });
 }
 
-supplierSelect.onchange=()=>{cancelEdit();renderTable();};
+supplierSelectEl.onchange=()=>{cancelEdit();renderTable();};
 
 /* TABLE */
 function renderTable(){
-  tbody.innerHTML="";
-  if(!supplierSelect.value){
-    table.classList.add("hidden");
+  tbodyEl.innerHTML="";
+  if(!supplierSelectEl.value){
+    tableEl.classList.add("hidden");
     return;
   }
-  table.classList.remove("hidden");
+  tableEl.classList.remove("hidden");
 
-  data.filter(x=>x.dobavljac===supplierSelect.value).forEach(r=>{
+  const rows = data.filter(x=>x.dobavljac===supplierSelectEl.value);
+  if(rows.length === 0){
+    // Ako iz nekog razloga nema match-a, ostavi prazno ali bez pucanja
+    return;
+  }
+
+  rows.forEach(r=>{
     const tr=document.createElement("tr");
     if(editingRowId===r.rowId) tr.classList.add("editing");
 
     tr.appendChild(td(r.proizvod,()=>startEdit(r)));
     tr.appendChild(td(r.sifra,()=>startEdit(r)));
 
-    tbody.appendChild(tr);
+    tbodyEl.appendChild(tr);
   });
 }
 
@@ -202,10 +220,10 @@ function td(t,cb){
 }
 
 /* EDIT MODE */
-editBtn.onclick=()=>{
+editBtnEl.onclick=()=>{
   editMode=!editMode;
-  editForm.classList.toggle("hidden",!editMode);
-cancelEdit();
+  editFormEl.classList.toggle("hidden",!editMode);
+  cancelEdit();
   renderTable();
 };
 
@@ -215,8 +233,8 @@ function startEdit(row){
     alert("Edit nije moguće dok Apps Script ne šalje rowId. Ažuriraj doGet/doPost u Apps Scriptu (rowId podrška).");
     return;
   }
-  productInput.value = row.proizvod;
-  codeInput.value    = row.sifra;
+  productInputEl.value = row.proizvod || "";
+  codeInputEl.value    = row.sifra || "";
   editingRowId       = row.rowId;
   renderTable();
 }
@@ -224,14 +242,14 @@ function startEdit(row){
 
 function cancelEdit(){
   editingRowId = null;
-  productInput.value = "";
-  codeInput.value = "";
+  productInputEl.value = "";
+  codeInputEl.value = "";
 }
 
 
 /* SAVE */
-saveBtn.onclick=async()=>{
-  if(!supplierSelect.value||!productInput.value||!codeInput.value){
+saveBtnEl.onclick=async()=>{
+  if(!supplierSelectEl.value||!productInputEl.value||!codeInputEl.value){
     alert("Popuni sva polja");return;
   }
 
@@ -241,9 +259,9 @@ saveBtn.onclick=async()=>{
     body:new URLSearchParams({
       action: "upsert",
       rowId: editingRowId || "",
-      dobavljac: supplierSelect.value,
-      proizvod: productInput.value.trim(),
-      sifra: codeInput.value.trim()
+      dobavljac: supplierSelectEl.value,
+      proizvod: productInputEl.value.trim(),
+      sifra: codeInputEl.value.trim()
     })
   });
 
@@ -253,19 +271,19 @@ saveBtn.onclick=async()=>{
 
 /* PRINT ALL */
 function printAll(){
-  if(!supplierSelect.value){alert("Odaberi dobavljača");return;}
-  const list = data.filter(x => x.dobavljac === supplierSelect.value);
+  if(!supplierSelectEl.value){alert("Odaberi dobavljača");return;}
+  const list = data.filter(x => x.dobavljac === supplierSelectEl.value);
   if(!list.length){alert("Nema proizvoda");return;}
 
   // Sortiranje kao na listi (po proizvodu) – možeš obrisati ako želiš originalni redoslijed iz sheeta
   list.sort((a,b)=> (a.proizvod||"").localeCompare(b.proizvod||"", "sr"));
 
-  printContent.innerHTML = "";
+  printContentEl.innerHTML = "";
 
   const header = document.createElement("div");
   header.className = "printHeader";
-  header.textContent = supplierSelect.value;
-  printContent.appendChild(header);
+  header.textContent = supplierSelectEl.value;
+  printContentEl.appendChild(header);
 
   const table = document.createElement("table");
   table.className = "printTable";
@@ -302,12 +320,12 @@ function printAll(){
     table.appendChild(tr);
   });
 
-  printContent.appendChild(table);
-  qrModal.style.display = "flex";
+  printContentEl.appendChild(table);
+  qrModalEl.style.display = "flex";
 }
 
 
-function closePrint(){qrModal.style.display="none";}
+function closePrint(){qrModalEl.style.display="none";}
 
 /* INIT */
 loadData();
