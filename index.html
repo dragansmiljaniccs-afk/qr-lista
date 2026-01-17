@@ -2,7 +2,7 @@
 <html lang="sr">
 <head>
 <meta charset="UTF-8">
-<title>QR šifrarnik</title>
+<title>Lista Šifri(QR)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -96,6 +96,16 @@ button{cursor:pointer}
 
 @page{ size:A4; margin:8mm; }
 @media print{
+  /* FORCE table borders in Firefox print preview */
+  .printTable, .printTable td{
+    border:1.2px solid #000 !important;
+    border-collapse:collapse !important;
+  }
+  *{
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body *{visibility:hidden}
   #qrModal,#qrModal *{visibility:visible}
   #qrModal{position:static !important; background:#fff !important; display:block !important; align-items:unset !important; justify-content:unset !important;}
