@@ -35,7 +35,6 @@ th,td{
 }
 .hidden{display:none}
 button{cursor:pointer}
-.red{color:red;font-weight:bold}
 .editing{background:#1a1a1a}
 
 /* PRINT – A4 izgled kao u PDF */
@@ -68,21 +67,21 @@ button{cursor:pointer}
   width:100%;
   border-collapse:collapse;
   table-layout:fixed;
+  border:1px solid #000;
 }
 .printTable td{
   border:1px solid #000;
-  padding:6px 8px;
+  padding:4px 6px;
   vertical-align:middle;
   font-size:12pt;
   line-height:1.15;
 }
-.printRow{ height:22mm; }
+.printRow{ height:20mm; break-inside:avoid; }
 .cellName{ width:55%; text-align:left; }
 .cellCode{ width:20%; text-align:center; }
 .cellQR{ width:25%; text-align:center; }
 .cellQR img{ width:28mm; height:28mm; display:block; margin:0 auto; }
 .codeSmall{ font-size:9pt; margin-top:2mm; letter-spacing:0.3mm; }
-.pageBreak{ page-break-after:always; }
 #qrControls{ margin-top:12px; text-align:center; }
 #qrControls button{
   font-size:1.05rem;
@@ -99,8 +98,8 @@ button{cursor:pointer}
 @media print{
   body *{visibility:hidden}
   #qrModal,#qrModal *{visibility:visible}
-  #qrModal{position:static; background:#fff}
-  #qrBox{border:none; width:100%; max-height:none; overflow:visible; padding:0}
+  #qrModal{position:static !important; background:#fff !important; display:block !important; align-items:unset !important; justify-content:unset !important;}
+  #qrBox{border:none; width:100%; max-height:none; overflow:visible; padding:0; margin:0}
   #qrControls{display:none}
 }
 </style>
@@ -132,7 +131,6 @@ button{cursor:pointer}
 <tr>
   <th>Proizvod</th>
   <th>Šifra</th>
-  <th id="delHead" class="hidden">X</th>
 </tr>
 </thead>
 <tbody id="tbody"></tbody>
@@ -192,13 +190,6 @@ function renderTable(){
     tr.appendChild(td(r.proizvod,()=>startEdit(r)));
     tr.appendChild(td(r.sifra,()=>startEdit(r)));
 
-    if(editMode){
-      const x=td("X");
-      x.className="red";
-      x.onclick=()=>del(r.sifra);
-      tr.appendChild(x);
-    }
-
     tbody.appendChild(tr);
   });
 }
@@ -214,8 +205,7 @@ function td(t,cb){
 editBtn.onclick=()=>{
   editMode=!editMode;
   editForm.classList.toggle("hidden",!editMode);
-  delHead.classList.toggle("hidden",!editMode);
-  cancelEdit();
+cancelEdit();
   renderTable();
 };
 
@@ -255,87 +245,58 @@ saveBtn.onclick=async()=>{
   loadData();
 };
 
-/* DELETE */
-async function del(code){
-  if(!confirm("Obrisati proizvod?"))return;
-  await fetch(SCRIPT_URL,{
-    method:"POST",
-    mode:"no-cors",
-    body:new URLSearchParams({
-      action:"delete",
-      dobavljac:supplierSelect.value,
-      sifra:code
-    })
-  });
-  loadData();
-}
-
 /* PRINT ALL */
 function printAll(){
   if(!supplierSelect.value){alert("Odaberi dobavljača");return;}
   const list = data.filter(x => x.dobavljac === supplierSelect.value);
   if(!list.length){alert("Nema proizvoda");return;}
 
-  // Sortiranje kao u tabeli (po nazivu proizvoda)
+  // Sortiranje kao na listi (po proizvodu) – možeš obrisati ako želiš originalni redoslijed iz sheeta
   list.sort((a,b)=> (a.proizvod||"").localeCompare(b.proizvod||"", "sr"));
 
-  const PER_PAGE = 12; // približno kao primjer u PDF-u
   printContent.innerHTML = "";
 
-  for(let start=0; start<list.length; start+=PER_PAGE){
-    const chunk = list.slice(start, start+PER_PAGE);
+  const header = document.createElement("div");
+  header.className = "printHeader";
+  header.textContent = supplierSelect.value;
+  printContent.appendChild(header);
 
-    const page = document.createElement("div");
-    if(start + PER_PAGE < list.length) page.className = "pageBreak";
+  const table = document.createElement("table");
+  table.className = "printTable";
 
-    // zaglavlje samo na prvoj strani
-    if(start === 0){
-      const header = document.createElement("div");
-      header.className = "printHeader";
-      header.textContent = supplierSelect.value;
-      page.appendChild(header);
-    }
+  list.forEach(i => {
+    const tr = document.createElement("tr");
+    tr.className = "printRow";
 
-    const table = document.createElement("table");
-    table.className = "printTable";
+    const tdName = document.createElement("td");
+    tdName.className = "cellName";
+    tdName.textContent = i.proizvod;
 
-    chunk.forEach(i => {
-      const tr = document.createElement("tr");
-      tr.className = "printRow";
+    const tdCode = document.createElement("td");
+    tdCode.className = "cellCode";
+    tdCode.textContent = i.sifra;
 
-      const tdName = document.createElement("td");
-      tdName.className = "cellName";
-      tdName.textContent = i.proizvod;
+    const tdQR = document.createElement("td");
+    tdQR.className = "cellQR";
 
-      const tdCode = document.createElement("td");
-      tdCode.className = "cellCode";
-      tdCode.textContent = i.sifra;
+    const img = document.createElement("img");
+    img.src = "https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=" + encodeURIComponent(i.sifra);
+    img.alt = "QR";
 
-      const tdQR = document.createElement("td");
-      tdQR.className = "cellQR";
+    const small = document.createElement("div");
+    small.className = "codeSmall";
+    small.textContent = i.sifra;
 
-      const img = document.createElement("img");
-      // QR u veličini sličnoj barkodu iz primjera
-      img.src = "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent(i.sifra);
-      img.alt = "QR";
+    tdQR.appendChild(img);
+    tdQR.appendChild(small);
 
-      const small = document.createElement("div");
-      small.className = "codeSmall";
-      small.textContent = i.sifra;
+    tr.appendChild(tdName);
+    tr.appendChild(tdCode);
+    tr.appendChild(tdQR);
+    table.appendChild(tr);
+  });
 
-      tdQR.appendChild(img);
-      tdQR.appendChild(small);
-
-      tr.appendChild(tdName);
-      tr.appendChild(tdCode);
-      tr.appendChild(tdQR);
-      table.appendChild(tr);
-    });
-
-    page.appendChild(table);
-    printContent.appendChild(page);
-  }
-
+  printContent.appendChild(table);
   qrModal.style.display = "flex";
 }
 
