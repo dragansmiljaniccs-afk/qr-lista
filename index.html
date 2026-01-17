@@ -96,16 +96,6 @@ button{cursor:pointer}
 
 @page{ size:A4; margin:8mm; }
 @media print{
-  /* FORCE table borders in Firefox print preview */
-  .printTable, .printTable td{
-    border:1.2px solid #000 !important;
-    border-collapse:collapse !important;
-  }
-  *{
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
   body *{visibility:hidden}
   #qrModal,#qrModal *{visibility:visible}
   #qrModal{position:static !important; background:#fff !important; display:block !important; align-items:unset !important; justify-content:unset !important;}
@@ -163,7 +153,7 @@ const SCRIPT_URL =
 
 let data=[];
 let editMode=false;
-let editingRowId = null;
+let editingRowId=null;
 
 /* LOAD */
 async function loadData(){
@@ -195,7 +185,7 @@ function renderTable(){
 
   data.filter(x=>x.dobavljac===supplierSelect.value).forEach(r=>{
     const tr=document.createElement("tr");
-    if(editingCode===r.sifra) tr.classList.add("editing");
+    if(editingRowId===r.rowId) tr.classList.add("editing");
 
     tr.appendChild(td(r.proizvod,()=>startEdit(r)));
     tr.appendChild(td(r.sifra,()=>startEdit(r)));
@@ -221,12 +211,13 @@ cancelEdit();
 
 function startEdit(row){
   if(!editMode) return;
+  if(row.rowId === undefined || row.rowId === null || row.rowId === ""){
+    alert("Edit nije moguće dok Apps Script ne šalje rowId. Ažuriraj doGet/doPost u Apps Scriptu (rowId podrška).");
+    return;
+  }
   productInput.value = row.proizvod;
   codeInput.value    = row.sifra;
-
-  // ✅ pamti tačno koji red mijenjaš u Sheetu
-  editingRowId = row.rowId;
-
+  editingRowId       = row.rowId;
   renderTable();
 }
 
@@ -248,13 +239,12 @@ saveBtn.onclick=async()=>{
     method:"POST",
     mode:"no-cors",
     body:new URLSearchParams({
-  action: "upsert",
-  rowId: editingRowId || "",
-  dobavljac: supplierSelect.value,
-  proizvod: productInput.value.trim(),
-  sifra: codeInput.value.trim()
-})
-
+      action: "upsert",
+      rowId: editingRowId || "",
+      dobavljac: supplierSelect.value,
+      proizvod: productInput.value.trim(),
+      sifra: codeInput.value.trim()
+    })
   });
 
   cancelEdit();
