@@ -37,7 +37,7 @@ th,td{
 button{cursor:pointer}
 .editing{background:#1a1a1a}
 
-/* PRINT – A4 izgled kao u PDF */
+/* PRINT MODAL */
 #qrModal{
   position:fixed;
   inset:0;
@@ -94,33 +94,61 @@ button{cursor:pointer}
   cursor:pointer;
 }
 
-@page{ size:A4; margin:8mm; }
-
-/* ✅ FIX: nema više prazne prve stranice */
+/* ✅ FIX V2: 100% bez prazne prve stranice */
 @media print{
-  /* ✅ U printu prikaži SAMO modal sa sadržajem za štampu */
-  body > *:not(#qrModal){ display:none !important; }
+  @page{ size:A4; margin:0; }
 
-  /* Modal postaje normalan dokument u printu */
+  html, body{
+    margin:0 !important;
+    padding:0 !important;
+    height:auto !important;
+    background:#fff !important;
+    color:#000 !important;
+  }
+
+  /* Sakrij sve u body */
+  body > *{
+    display:none !important;
+  }
+
+  /* Prikaži samo modal */
   #qrModal{
     display:block !important;
     position:static !important;
     inset:auto !important;
+    width:100% !important;
+    height:auto !important;
+    margin:0 !important;
+    padding:0 !important;
     background:#fff !important;
-    align-items:unset !important;
-    justify-content:unset !important;
   }
 
+  /* Ovo je "papir" */
   #qrBox{
-    border:none !important;
     width:100% !important;
     max-height:none !important;
     overflow:visible !important;
-    padding:0 !important;
     margin:0 !important;
+    padding:8mm !important;
+    border:none !important;
+    box-shadow:none !important;
+    background:#fff !important;
+    color:#000 !important;
   }
 
-  #qrControls{display:none !important;}
+  #printContent{
+    page-break-before:avoid !important;
+    break-before:avoid-page !important;
+  }
+
+  #qrControls{
+    display:none !important;
+  }
+
+  .printRow{
+    page-break-inside:avoid !important;
+    break-inside:avoid !important;
+  }
 }
 </style>
 </head>
@@ -175,7 +203,7 @@ let data=[];
 let editMode=false;
 let editingRowId=null;
 
-// ✅ Stabilno u svim browserima (ne oslanjamo se na automatske globalne varijable iz HTML id-a)
+// Stabilno
 const supplierSelectEl = document.getElementById('supplierSelect');
 const tableEl = document.getElementById('table');
 const tbodyEl = document.getElementById('tbody');
@@ -216,11 +244,6 @@ function renderTable(){
   tableEl.classList.remove("hidden");
 
   const rows = data.filter(x=>x.dobavljac===supplierSelectEl.value);
-  if(rows.length === 0){
-    // Ako iz nekog razloga nema match-a, ostavi prazno ali bez pucanja
-    return;
-  }
-
   rows.forEach(r=>{
     const tr=document.createElement("tr");
     if(editingRowId===r.rowId) tr.classList.add("editing");
@@ -250,7 +273,7 @@ editBtnEl.onclick=()=>{
 function startEdit(row){
   if(!editMode) return;
   if(row.rowId === undefined || row.rowId === null || row.rowId === ""){
-    alert("Edit nije moguće dok Apps Script ne šalje rowId. Ažuriraj doGet/doPost u Apps Scriptu (rowId podrška).");
+    alert("Edit nije moguće dok Apps Script ne šalje rowId.");
     return;
   }
   productInputEl.value = row.proizvod || "";
@@ -293,7 +316,6 @@ function printAll(){
   const list = data.filter(x => x.dobavljac === supplierSelectEl.value);
   if(!list.length){alert("Nema proizvoda");return;}
 
-  // Sortiranje kao na listi (po proizvodu) – možeš obrisati ako želiš originalni redoslijed iz sheeta
   list.sort((a,b)=> (a.proizvod||"").localeCompare(b.proizvod||"", "sr"));
 
   printContentEl.innerHTML = "";
